@@ -1,0 +1,1 @@
+ALTER TABLE compositions ADD COLUMN IF NOT EXISTS voice_gender TEXT NOT NULL DEFAULT 'any';

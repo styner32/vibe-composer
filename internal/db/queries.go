@@ -19,6 +19,7 @@ type Composition struct {
 	InputAudioURL *string   `json:"input_audio_url,omitempty"`
 	Emotion       *string   `json:"emotion,omitempty"`
 	MusicStyle    string    `json:"music_style"`
+	VoiceGender   string    `json:"voice_gender"`
 	MusicPrompt   *string   `json:"music_prompt,omitempty"`
 	ResultURL     *string   `json:"result_url,omitempty"`
 	ResultLyrics  *string   `json:"result_lyrics,omitempty"`
@@ -41,10 +42,10 @@ func NewQueries(pool *pgxpool.Pool) *Queries {
 func (q *Queries) CreateComposition(ctx context.Context, c *Composition) (string, error) {
 	var id string
 	err := q.pool.QueryRow(ctx,
-		`INSERT INTO compositions (username, status, input_type, input_text, input_audio_url, emotion, music_style, music_prompt)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		`INSERT INTO compositions (username, status, input_type, input_text, input_audio_url, emotion, music_style, voice_gender, music_prompt)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		 RETURNING id`,
-		c.Username, c.Status, c.InputType, c.InputText, c.InputAudioURL, c.Emotion, c.MusicStyle, c.MusicPrompt,
+		c.Username, c.Status, c.InputType, c.InputText, c.InputAudioURL, c.Emotion, c.MusicStyle, c.VoiceGender, c.MusicPrompt,
 	).Scan(&id)
 	if err != nil {
 		return "", fmt.Errorf("inserting composition: %w", err)
@@ -57,12 +58,12 @@ func (q *Queries) GetComposition(ctx context.Context, id string) (*Composition, 
 	c := &Composition{}
 	err := q.pool.QueryRow(ctx,
 		`SELECT id, username, status, input_type, input_text, input_audio_url, emotion,
-		        music_style, music_prompt, result_url, result_lyrics, error_message,
+		        music_style, voice_gender, music_prompt, result_url, result_lyrics, error_message,
 		        created_at, updated_at
 		 FROM compositions WHERE id = $1`, id,
 	).Scan(
 		&c.ID, &c.Username, &c.Status, &c.InputType, &c.InputText, &c.InputAudioURL,
-		&c.Emotion, &c.MusicStyle, &c.MusicPrompt, &c.ResultURL, &c.ResultLyrics,
+		&c.Emotion, &c.MusicStyle, &c.VoiceGender, &c.MusicPrompt, &c.ResultURL, &c.ResultLyrics,
 		&c.ErrorMessage, &c.CreatedAt, &c.UpdatedAt,
 	)
 	if err != nil {
@@ -78,7 +79,7 @@ func (q *Queries) GetComposition(ctx context.Context, id string) (*Composition, 
 func (q *Queries) ListCompositions(ctx context.Context, username string) ([]*Composition, error) {
 	rows, err := q.pool.Query(ctx,
 		`SELECT id, username, status, input_type, input_text, input_audio_url, emotion,
-		        music_style, music_prompt, result_url, result_lyrics, error_message,
+		        music_style, voice_gender, music_prompt, result_url, result_lyrics, error_message,
 		        created_at, updated_at
 		 FROM compositions WHERE username = $1
 		 ORDER BY created_at DESC
@@ -94,7 +95,7 @@ func (q *Queries) ListCompositions(ctx context.Context, username string) ([]*Com
 		c := &Composition{}
 		if err := rows.Scan(
 			&c.ID, &c.Username, &c.Status, &c.InputType, &c.InputText, &c.InputAudioURL,
-			&c.Emotion, &c.MusicStyle, &c.MusicPrompt, &c.ResultURL, &c.ResultLyrics,
+			&c.Emotion, &c.MusicStyle, &c.VoiceGender, &c.MusicPrompt, &c.ResultURL, &c.ResultLyrics,
 			&c.ErrorMessage, &c.CreatedAt, &c.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scanning composition: %w", err)

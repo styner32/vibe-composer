@@ -49,6 +49,11 @@
     const removeAudioBtn = $('#remove-audio-btn');
     const styleFunnyLabel = $('#style-funny-label');
     const styleHarshLabel = $('#style-harsh-label');
+    const styleHiphopLabel = $('#style-hiphop-label');
+    const stylePansoriLabel = $('#style-pansori-label');
+    const voiceAnyLabel = $('#voice-any-label');
+    const voiceMaleLabel = $('#voice-male-label');
+    const voiceFemaleLabel = $('#voice-female-label');
     const generateBtn = $('#generate-btn');
     const composeError = $('#compose-error');
     const activeGeneration = $('#active-generation');
@@ -211,6 +216,16 @@
         const selected = document.querySelector('input[name="style"]:checked').value;
         styleFunnyLabel.classList.toggle('selected', selected === 'funny');
         styleHarshLabel.classList.toggle('selected', selected === 'harsh');
+        styleHiphopLabel.classList.toggle('selected', selected === 'hiphop');
+        stylePansoriLabel.classList.toggle('selected', selected === 'pansori');
+    }
+
+    // --- Voice Selection ---
+    function updateVoiceSelection() {
+        const selected = document.querySelector('input[name="voice"]:checked').value;
+        voiceAnyLabel.classList.toggle('selected', selected === 'any');
+        voiceMaleLabel.classList.toggle('selected', selected === 'male');
+        voiceFemaleLabel.classList.toggle('selected', selected === 'female');
     }
 
     // --- Compose ---
@@ -233,6 +248,7 @@
 
         const formData = new FormData();
         formData.append('style', style);
+        formData.append('voice', document.querySelector('input[name="voice"]:checked').value);
 
         if (currentMode === 'text') {
             formData.append('text', text);
@@ -376,8 +392,15 @@
         }
 
         compositionsList.innerHTML = compositions.map(comp => {
-            const styleEmoji = comp.music_style === 'funny' ? '😂' : '🤘';
-            const styleName = comp.music_style === 'funny' ? 'Funny' : 'Harsh';
+            const styleMap = {
+                funny:   { emoji: '😂', name: 'Funny' },
+                harsh:   { emoji: '🤘', name: 'Harsh' },
+                hiphop:  { emoji: '🎤', name: 'Hip-Hop' },
+                pansori: { emoji: '🥁', name: '판소리' },
+            };
+            const styleInfo = styleMap[comp.music_style] || { emoji: '🎵', name: comp.music_style };
+            const styleEmoji = styleInfo.emoji;
+            const styleName = styleInfo.name;
             const inputPreview = comp.input_text
                 ? truncate(comp.input_text, 100)
                 : `🎤 Audio input`;
@@ -401,6 +424,7 @@
                 <div class="composition-item" id="comp-${comp.id}">
                     <div class="comp-header">
                         <span class="comp-style">${styleEmoji} ${styleName}</span>
+                        <span class="comp-voice">${comp.voice_gender && comp.voice_gender !== 'any' ? (comp.voice_gender === 'male' ? '🧔' : '👩') + ' ' + comp.voice_gender : ''}</span>
                         <span class="comp-status ${comp.status}">${comp.status}</span>
                     </div>
                     <div class="comp-input">${escapeHtml(inputPreview)}</div>
@@ -540,6 +564,11 @@
         // Style selection
         document.querySelectorAll('input[name="style"]').forEach(radio => {
             radio.addEventListener('change', updateStyleSelection);
+        });
+
+        // Voice selection
+        document.querySelectorAll('input[name="voice"]').forEach(radio => {
+            radio.addEventListener('change', updateVoiceSelection);
         });
 
         // Generate

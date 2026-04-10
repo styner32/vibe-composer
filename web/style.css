@@ -585,8 +585,36 @@ textarea::placeholder {
 
 .style-options {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, 1fr);
     gap: var(--space-md);
+}
+
+/* Voice Selection — compact variant */
+.voice-selection {
+    margin: var(--space-lg) 0 var(--space-md) 0;
+}
+
+.voice-options {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-sm);
+}
+
+.voice-option .style-card {
+    padding: var(--space-md);
+}
+
+.voice-option .style-emoji {
+    font-size: 1.4rem;
+}
+
+.voice-option .style-name {
+    font-size: 0.85rem;
+}
+
+.comp-voice {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-transform: capitalize;
 }
 
 .style-option {
