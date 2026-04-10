@@ -67,8 +67,19 @@ func (h *Handler) Compose(w http.ResponseWriter, r *http.Request) {
 	if style == "" {
 		style = "funny"
 	}
-	if style != "funny" && style != "harsh" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "style must be 'funny' or 'harsh'"})
+	validStyles := map[string]bool{"funny": true, "harsh": true, "hiphop": true, "pansori": true}
+	if !validStyles[style] {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "style must be 'funny', 'harsh', 'hiphop', or 'pansori'"})
+		return
+	}
+
+	voice := r.FormValue("voice")
+	if voice == "" {
+		voice = "any"
+	}
+	validVoices := map[string]bool{"male": true, "female": true, "any": true}
+	if !validVoices[voice] {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "voice must be 'male', 'female', or 'any'"})
 		return
 	}
 
@@ -103,10 +114,11 @@ func (h *Handler) Compose(w http.ResponseWriter, r *http.Request) {
 
 	// Create composition record
 	comp := &db.Composition{
-		Username:   username,
-		Status:     "pending",
-		InputType:  inputType,
-		MusicStyle: style,
+		Username:    username,
+		Status:      "pending",
+		InputType:   inputType,
+		MusicStyle:  style,
+		VoiceGender: voice,
 	}
 	if textInput != "" {
 		comp.InputText = &textInput
@@ -139,6 +151,7 @@ func (h *Handler) Compose(w http.ResponseWriter, r *http.Request) {
 		AudioData:     audioData,
 		AudioMIME:     audioMIME,
 		MusicStyle:    style,
+		VoiceGender:   voice,
 	})
 
 	writeJSON(w, http.StatusAccepted, map[string]any{

@@ -21,6 +21,7 @@ type Job struct {
 	AudioData     []byte
 	AudioMIME     string
 	MusicStyle    string
+	VoiceGender   string
 }
 
 // Composer processes music generation jobs in the background.
@@ -115,7 +116,7 @@ func (c *Composer) process(ctx context.Context, job Job) {
 	if originalText == "" && analysis.Transcription != "" {
 		originalText = analysis.Transcription
 	}
-	musicPrompt := prompt.Build(analysis, job.MusicStyle, originalText)
+	musicPrompt := prompt.Build(analysis, job.MusicStyle, job.VoiceGender, originalText)
 
 	emotionJSON, _ := json.Marshal(analysis)
 	if err := c.queries.UpdateMusicPrompt(ctx, job.CompositionID, musicPrompt, string(emotionJSON)); err != nil {
