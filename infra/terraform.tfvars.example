@@ -1,0 +1,9 @@
+# Copy this file to terraform.tfvars and fill in your values
+
+project_id     = "your-gcp-project-id"
+region         = "us-central1"
+gemini_api_key = "your-gemini-api-key"
+auth_password  = "vibecheck"
+allowed_users  = "sunjin"
+cloud_sql_tier = "db-f1-micro"
+image_tag      = "latest"
