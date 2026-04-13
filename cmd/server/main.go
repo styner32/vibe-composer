@@ -21,6 +21,7 @@ import (
 	"github.com/vibe-composer/internal/db"
 	"github.com/vibe-composer/internal/handler"
 	"github.com/vibe-composer/internal/lyria"
+	"github.com/vibe-composer/internal/lyricist"
 	"github.com/vibe-composer/internal/storage"
 	"github.com/vibe-composer/internal/worker"
 )
@@ -78,8 +79,9 @@ func main() {
 
 	// Initialize components
 	audioAnalyzer := analyzer.NewAnalyzer(genaiClient)
+	songLyricist := lyricist.NewLyricist(genaiClient)
 	lyriaClient := lyria.NewClient(genaiClient)
-	composer := worker.NewComposer(queries, audioAnalyzer, lyriaClient, gcs, cfg.GCSBucket)
+	composer := worker.NewComposer(queries, audioAnalyzer, songLyricist, lyriaClient, gcs, cfg.GCSBucket)
 
 	// Start background worker
 	go composer.Start(ctx)

@@ -83,6 +83,16 @@ func (h *Handler) Compose(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	lyricType := r.FormValue("lyric_type")
+	if lyricType == "" {
+		lyricType = "arc"
+	}
+	validLyricTypes := map[string]bool{"arc": true, "immersion": true}
+	if !validLyricTypes[lyricType] {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "lyric_type must be 'arc' or 'immersion'"})
+		return
+	}
+
 	// Check for audio file
 	var audioData []byte
 	var audioMIME string
@@ -119,6 +129,7 @@ func (h *Handler) Compose(w http.ResponseWriter, r *http.Request) {
 		InputType:   inputType,
 		MusicStyle:  style,
 		VoiceGender: voice,
+		LyricType:   lyricType,
 	}
 	if textInput != "" {
 		comp.InputText = &textInput
@@ -152,6 +163,7 @@ func (h *Handler) Compose(w http.ResponseWriter, r *http.Request) {
 		AudioMIME:     audioMIME,
 		MusicStyle:    style,
 		VoiceGender:   voice,
+		LyricType:     lyricType,
 	})
 
 	writeJSON(w, http.StatusAccepted, map[string]any{

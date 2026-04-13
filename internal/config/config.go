@@ -17,7 +17,7 @@ type Config struct {
 
 // Load reads configuration from environment variables.
 func Load() *Config {
-	allowedUsers := getEnv("ALLOWED_USERS", "sunjin")
+	allowedUsers := getEnv("ALLOWED_USERS", "sunjin,velvet-panda,neon-otter,cosmic-tanuki,mellow-fox,turbo-finch,hazy-lynx,ember-crane,drift-moose,glitch-heron,plum-badger")
 	users := strings.Split(allowedUsers, ",")
 	for i := range users {
 		users[i] = strings.TrimSpace(users[i])
