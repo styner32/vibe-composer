@@ -59,6 +59,10 @@
     const activeGeneration = $('#active-generation');
     const statusMessage = $('#status-message');
 
+    // Lyric type
+    const lyricArcLabel = $('#lyric-arc-label');
+    const lyricImmersionLabel = $('#lyric-immersion-label');
+
     // Library
     const compositionsList = $('#compositions-list');
     const refreshBtn = $('#refresh-btn');
@@ -228,6 +232,13 @@
         voiceFemaleLabel.classList.toggle('selected', selected === 'female');
     }
 
+    // --- Lyric Type Selection ---
+    function updateLyricTypeSelection() {
+        const selected = document.querySelector('input[name="lyric_type"]:checked').value;
+        lyricArcLabel.classList.toggle('selected', selected === 'arc');
+        lyricImmersionLabel.classList.toggle('selected', selected === 'immersion');
+    }
+
     // --- Compose ---
     async function handleCompose() {
         const style = document.querySelector('input[name="style"]:checked').value;
@@ -249,6 +260,7 @@
         const formData = new FormData();
         formData.append('style', style);
         formData.append('voice', document.querySelector('input[name="voice"]:checked').value);
+        formData.append('lyric_type', document.querySelector('input[name="lyric_type"]:checked').value);
 
         if (currentMode === 'text') {
             formData.append('text', text);
@@ -420,6 +432,15 @@
                     ? `<span style="color:#ef4444;font-size:0.8rem">${comp.error_message ? truncate(comp.error_message, 50) : 'Error'}</span>`
                     : '';
 
+            const lyricsSection = comp.generated_lyrics
+                ? `<div class="comp-lyrics-toggle">
+                       <button class="btn-lyrics" onclick="window.vibeApp.toggleLyrics('${comp.id}')">📝 Lyrics</button>
+                   </div>
+                   <div class="comp-lyrics" id="lyrics-${comp.id}" style="display:none">
+                       <pre class="lyrics-text">${escapeHtml(comp.generated_lyrics)}</pre>
+                   </div>`
+                : '';
+
             return `
                 <div class="composition-item" id="comp-${comp.id}">
                     <div class="comp-header">
@@ -428,6 +449,7 @@
                         <span class="comp-status ${comp.status}">${comp.status}</span>
                     </div>
                     <div class="comp-input">${escapeHtml(inputPreview)}</div>
+                    ${lyricsSection}
                     <div class="comp-meta">
                         <span class="comp-date">${date}</span>
                         ${actions}
@@ -489,6 +511,18 @@
         playerAudio.pause();
         playerAudio.src = '';
         audioPlayer.classList.add('hidden');
+    }
+
+    function toggleLyrics(compositionId) {
+        const el = document.getElementById(`lyrics-${compositionId}`);
+        if (!el) return;
+        const isHidden = el.style.display === 'none';
+        el.style.display = isHidden ? 'block' : 'none';
+        // Update button text
+        const btn = el.previousElementSibling?.querySelector('.btn-lyrics');
+        if (btn) {
+            btn.textContent = isHidden ? '📝 Hide Lyrics' : '📝 Lyrics';
+        }
     }
 
     // --- Notification ---
@@ -571,6 +605,11 @@
             radio.addEventListener('change', updateVoiceSelection);
         });
 
+        // Lyric type selection
+        document.querySelectorAll('input[name="lyric_type"]').forEach(radio => {
+            radio.addEventListener('change', updateLyricTypeSelection);
+        });
+
         // Generate
         generateBtn.addEventListener('click', handleCompose);
 
@@ -585,6 +624,7 @@
     window.vibeApp = {
         play: playComposition,
         download: downloadComposition,
+        toggleLyrics: toggleLyrics,
     };
 
     // --- Start ---

@@ -866,6 +866,48 @@ textarea::placeholder {
     color: var(--text-primary);
 }
 
+/* Lyrics Toggle & Display */
+.comp-lyrics-toggle {
+    margin: var(--space-sm) 0 0 0;
+}
+
+.btn-lyrics {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
+    padding: var(--space-xs) var(--space-md);
+    border-radius: var(--radius-full);
+    font-size: 0.8rem;
+    border: 1px solid var(--border-glass);
+    cursor: pointer;
+    font-weight: 500;
+    transition: all var(--transition-base);
+}
+
+.btn-lyrics:hover {
+    background: rgba(124, 58, 237, 0.15);
+    color: var(--text-accent);
+    border-color: rgba(124, 58, 237, 0.3);
+}
+
+.comp-lyrics {
+    margin-top: var(--space-sm);
+    padding: var(--space-lg);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    animation: fadeIn 0.2s ease;
+}
+
+.lyrics-text {
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    line-height: 1.8;
+    color: var(--text-secondary);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    margin: 0;
+}
+
 .empty-state {
     text-align: center;
     padding: var(--space-2xl);

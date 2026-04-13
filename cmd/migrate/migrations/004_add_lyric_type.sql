@@ -1,0 +1,1 @@
+ALTER TABLE compositions ADD COLUMN IF NOT EXISTS lyric_type TEXT NOT NULL DEFAULT 'arc';

@@ -9,6 +9,7 @@ import (
 	"github.com/vibe-composer/internal/analyzer"
 	"github.com/vibe-composer/internal/db"
 	"github.com/vibe-composer/internal/lyria"
+	"github.com/vibe-composer/internal/lyricist"
 	"github.com/vibe-composer/internal/prompt"
 	"github.com/vibe-composer/internal/storage"
 )
@@ -22,6 +23,7 @@ type Job struct {
 	AudioMIME     string
 	MusicStyle    string
 	VoiceGender   string
+	LyricType     string
 }
 
 // Composer processes music generation jobs in the background.
@@ -29,6 +31,7 @@ type Composer struct {
 	jobs     chan Job
 	queries  *db.Queries
 	analyzer *analyzer.Analyzer
+	lyricist *lyricist.Lyricist
 	lyria    *lyria.Client
 	gcs      *storage.GCS
 	bucket   string
@@ -38,6 +41,7 @@ type Composer struct {
 func NewComposer(
 	queries *db.Queries,
 	analyzer *analyzer.Analyzer,
+	lyricist *lyricist.Lyricist,
 	lyriaClient *lyria.Client,
 	gcs *storage.GCS,
 	bucket string,
@@ -46,6 +50,7 @@ func NewComposer(
 		jobs:     make(chan Job, 100),
 		queries:  queries,
 		analyzer: analyzer,
+		lyricist: lyricist,
 		lyria:    lyriaClient,
 		gcs:      gcs,
 		bucket:   bucket,
@@ -107,16 +112,29 @@ func (c *Composer) process(ctx context.Context, job Job) {
 	slog.Info("analysis complete",
 		"emotion", analysis.PrimaryEmotion,
 		"intensity", analysis.EmotionIntensity,
+		"keywords", analysis.AbstractKeywords,
 		"summary", analysis.Summary,
 	)
 
-	// Step 2: Build creative music prompt
-	// Use original text for text input, or transcription for audio input
-	originalText := job.InputText
-	if originalText == "" && analysis.Transcription != "" {
-		originalText = analysis.Transcription
+	// Step 1.5: Generate lyrics from extracted emotion data (privacy-safe)
+	// The original text is NOT passed here — only the analyzed metadata.
+	generatedLyrics, err := c.lyricist.GenerateLyrics(ctx, analysis, job.MusicStyle, job.LyricType)
+	if err != nil {
+		c.fail(ctx, job.CompositionID, fmt.Sprintf("lyrics generation failed: %v", err))
+		return
 	}
-	musicPrompt := prompt.Build(analysis, job.MusicStyle, job.VoiceGender, originalText)
+
+	slog.Info("lyrics generated",
+		"lyrics_length", len(generatedLyrics),
+	)
+
+	// Save generated lyrics to DB (visible to user while music generates)
+	if err := c.queries.UpdateGeneratedLyrics(ctx, job.CompositionID, generatedLyrics); err != nil {
+		slog.Error("failed to save generated lyrics", "error", err)
+	}
+
+	// Step 2: Build creative music prompt using generated lyrics (not original text)
+	musicPrompt := prompt.Build(analysis, job.MusicStyle, job.VoiceGender, generatedLyrics)
 
 	emotionJSON, _ := json.Marshal(analysis)
 	if err := c.queries.UpdateMusicPrompt(ctx, job.CompositionID, musicPrompt, string(emotionJSON)); err != nil {

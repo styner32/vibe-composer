@@ -15,6 +15,9 @@ type AudioAnalysis struct {
 	PrimaryEmotion   string   `json:"primary_emotion"`
 	EmotionIntensity int      `json:"emotion_intensity"`
 	VocalTraits      []string `json:"vocal_traits"`
+	AbstractKeywords []string `json:"abstract_keywords"`
+	SpeechStyle      string   `json:"speech_style"`
+	Language         string   `json:"language"`
 	Summary          string   `json:"summary"`
 }
 
@@ -35,6 +38,9 @@ Return a JSON object with these exact fields:
   "primary_emotion": "one of: anger, frustration, sadness, disgust, anxiety, contempt, resentment",
   "emotion_intensity": 7,
   "vocal_traits": ["shouting", "sarcastic", "crying", "whispering", "trembling", "aggressive"],
+  "abstract_keywords": ["metaphorical", "words", "that", "capture", "the", "feeling"],
+  "speech_style": "describe how the person speaks — their tone, register, and attitude",
+  "language": "Korean",
   "summary": "brief description of the emotional context and what they're upset about"
 }
 
@@ -42,6 +48,9 @@ Rules:
 - emotion_intensity is 1-10 (1=mild, 10=explosive rage)
 - vocal_traits should describe HOW they sound, not WHAT they say
 - transcription should be as accurate as possible
+- abstract_keywords should be 3-6 metaphorical or symbolic words that capture the FEELING, not the literal situation. Example: "my boss ignored me" → ["invisibility", "echo", "glass wall", "hollow room"]. Do NOT use any words from the original input.
+- speech_style should capture the person's WAY of speaking, NOT what they said. Examples: "raw and casual, uses slang and profanity, speaks in 반말", "dry and sarcastic, deadpan delivery", "explosive and dramatic, exaggerates everything", "quiet and bitter, understated but cutting". This should describe their tone, register (formal/informal), attitude, and personality.
+- language should be the language the person is speaking in (e.g. "Korean", "English", "Japanese", "Spanish")
 - Only return valid JSON, no markdown formatting`
 
 // AnalyzeAudio sends audio data to Gemini Flash for transcription and emotion detection.
@@ -100,12 +109,18 @@ Return a JSON object with these exact fields:
   "primary_emotion": "one of: anger, frustration, sadness, disgust, anxiety, contempt, resentment",
   "emotion_intensity": 7,
   "vocal_traits": [],
+  "abstract_keywords": ["metaphorical", "words", "that", "capture", "the", "feeling"],
+  "speech_style": "describe how the person writes — their tone, register, and attitude",
+  "language": "Korean",
   "summary": "brief description of what they're upset about"
 }
 
 Rules:
 - emotion_intensity is 1-10 (1=mild, 10=explosive rage)
 - vocal_traits should be empty for text input
+- abstract_keywords should be 3-6 metaphorical or symbolic words that capture the FEELING, not the literal situation. Example: "my boss ignored me" → ["invisibility", "echo", "glass wall", "hollow room"]. Do NOT use any words from the original input.
+- speech_style should capture the person's WAY of writing, NOT what they wrote. Examples: "raw and casual, uses slang and profanity, writes in 반말", "dry and sarcastic, deadpan tone", "explosive and dramatic, exaggerates everything", "quiet and bitter, understated but cutting", "crude street talk, no filter". This should describe their tone, register (formal/informal/반말/존댓말), attitude, and personality.
+- language should be the language the text is written in (e.g. "Korean", "English", "Japanese", "Spanish")
 - Only return valid JSON, no markdown formatting`, text)
 
 	result, err := a.client.Models.GenerateContent(
