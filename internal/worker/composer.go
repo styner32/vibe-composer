@@ -24,6 +24,7 @@ type Job struct {
 	MusicStyle    string
 	VoiceGender   string
 	LyricType     string
+	ClipAudioURLs []string // GCS paths for accumulated clips (숙성 mode)
 }
 
 // Composer processes music generation jobs in the background.
@@ -83,6 +84,24 @@ func (c *Composer) process(ctx context.Context, job Job) {
 	if err := c.queries.UpdateStatus(ctx, job.CompositionID, "generating"); err != nil {
 		slog.Error("failed to update status", "error", err)
 		return
+	}
+
+	// If this is a clips-based job, download and concatenate clips first
+	if len(job.ClipAudioURLs) > 0 {
+		slog.Info("downloading and concatenating clips", "count", len(job.ClipAudioURLs))
+		var concatenated []byte
+		for i, clipURL := range job.ClipAudioURLs {
+			data, _, err := c.gcs.Download(ctx, clipURL)
+			if err != nil {
+				c.fail(ctx, job.CompositionID, fmt.Sprintf("failed to download clip %d: %v", i+1, err))
+				return
+			}
+			concatenated = append(concatenated, data...)
+			slog.Info("downloaded clip", "index", i+1, "size", len(data), "total", len(concatenated))
+		}
+		job.AudioData = concatenated
+		job.AudioMIME = "audio/webm"
+		slog.Info("clips concatenated", "total_size", len(concatenated), "clip_count", len(job.ClipAudioURLs))
 	}
 
 	// Step 1: Analyze input (emotion detection)

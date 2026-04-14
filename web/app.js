@@ -8,10 +8,18 @@
     // --- State ---
     let authHeader = '';
     let currentUsername = '';
-    let currentMode = 'text'; // 'text' | 'audio'
-    let selectedAudioFile = null;
     let pollingInterval = null;
     let activeCompositionId = null;
+
+    // Recording state (숙성)
+    let isRecording = false;
+    let mediaRecorder = null;
+    let recordingChunks = [];
+    let recordingStartTime = null;
+    let recordingTimerInterval = null;
+    let clips = []; // loaded from server
+    const MAX_RECORDING_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+    let maxDurationTimeout = null;
 
     // --- DOM Refs ---
     const $ = (sel) => document.querySelector(sel);
@@ -34,19 +42,11 @@
     // Tabs
     const tabBtns = $$('.tab-btn');
     const composeTab = $('#compose-tab');
+    const recordTab = $('#record-tab');
     const libraryTab = $('#library-tab');
 
     // Compose
-    const modeTextBtn = $('#mode-text-btn');
-    const modeAudioBtn = $('#mode-audio-btn');
-    const textInputSection = $('#text-input-section');
-    const audioInputSection = $('#audio-input-section');
     const ventText = $('#vent-text');
-    const audioDropZone = $('#audio-drop-zone');
-    const audioFileInput = $('#audio-file-input');
-    const audioPreview = $('#audio-preview');
-    const audioFileName = $('#audio-file-name');
-    const removeAudioBtn = $('#remove-audio-btn');
     const styleFunnyLabel = $('#style-funny-label');
     const styleHarshLabel = $('#style-harsh-label');
     const styleHiphopLabel = $('#style-hiphop-label');
@@ -62,6 +62,18 @@
     // Lyric type
     const lyricArcLabel = $('#lyric-arc-label');
     const lyricImmersionLabel = $('#lyric-immersion-label');
+
+    // Record (숙성)
+    const recordBtn = $('#record-btn');
+    const recordIcon = $('#record-icon');
+    const recordTimer = $('#record-timer');
+    const recordLabel = $('#record-label');
+    const audioLevelBars = $('#audio-level-bars');
+    const clipCount = $('#clip-count');
+    const clipTotalDuration = $('#clip-total-duration');
+    const clipList = $('#clip-list');
+    const generateFromClipsBtn = $('#generate-from-clips-btn');
+    const recordError = $('#record-error');
 
     // Library
     const compositionsList = $('#compositions-list');
@@ -161,6 +173,7 @@
 
     function handleLogout() {
         stopPolling();
+        stopRecording();
         showLogin();
     }
 
@@ -179,41 +192,18 @@
             btn.classList.toggle('active', btn.dataset.tab === tabName);
         });
         composeTab.classList.toggle('active', tabName === 'compose');
+        recordTab.classList.toggle('active', tabName === 'record');
         libraryTab.classList.toggle('active', tabName === 'library');
 
         if (tabName === 'library') {
             loadCompositions();
         }
-    }
-
-    // --- Input Mode ---
-    function switchMode(mode) {
-        currentMode = mode;
-        modeTextBtn.classList.toggle('active', mode === 'text');
-        modeAudioBtn.classList.toggle('active', mode === 'audio');
-        textInputSection.classList.toggle('active', mode === 'text');
-        audioInputSection.classList.toggle('active', mode === 'audio');
-    }
-
-    // --- Audio Upload ---
-    function handleAudioFile(file) {
-        if (!file) return;
-        if (file.size > 25 * 1024 * 1024) {
-            alert('File too large. Max 25MB.');
-            return;
+        if (tabName === 'record') {
+            loadClips();
         }
-        selectedAudioFile = file;
-        audioFileName.textContent = file.name;
-        audioDropZone.classList.add('hidden');
-        audioPreview.classList.remove('hidden');
     }
 
-    function removeAudio() {
-        selectedAudioFile = null;
-        audioFileInput.value = '';
-        audioDropZone.classList.remove('hidden');
-        audioPreview.classList.add('hidden');
-    }
+
 
     // --- Style Selection ---
     function updateStyleSelection() {
@@ -239,17 +229,26 @@
         lyricImmersionLabel.classList.toggle('selected', selected === 'immersion');
     }
 
+    // --- Record Tab: Style/Voice/Lyric Selection (separate radio group) ---
+    function updateRecOptionSelection(groupName) {
+        const selected = document.querySelector(`input[name="${groupName}"]:checked`);
+        if (!selected) return;
+        const options = document.querySelectorAll(`input[name="${groupName}"]`);
+        options.forEach(input => {
+            const label = input.closest('.style-option');
+            if (label) {
+                label.classList.toggle('selected', input === selected);
+            }
+        });
+    }
+
     // --- Compose ---
     async function handleCompose() {
         const style = document.querySelector('input[name="style"]:checked').value;
         const text = ventText.value.trim();
 
-        if (currentMode === 'text' && !text) {
+        if (!text) {
             showComposeError('Please tell us what\'s bothering you!');
-            return;
-        }
-        if (currentMode === 'audio' && !selectedAudioFile) {
-            showComposeError('Please upload an audio file!');
             return;
         }
 
@@ -261,12 +260,7 @@
         formData.append('style', style);
         formData.append('voice', document.querySelector('input[name="voice"]:checked').value);
         formData.append('lyric_type', document.querySelector('input[name="lyric_type"]:checked').value);
-
-        if (currentMode === 'text') {
-            formData.append('text', text);
-        } else {
-            formData.append('audio', selectedAudioFile);
-        }
+        formData.append('text', text);
 
         try {
             const res = await api('/api/compose', {
@@ -279,7 +273,6 @@
             if (res.ok) {
                 activeCompositionId = data.id;
                 ventText.value = '';
-                removeAudio();
                 showActiveGeneration(data.id);
                 startPolling(data.id);
             } else if (res.status === 409) {
@@ -379,6 +372,313 @@
         }
     }
 
+    // ============================================
+    // 숙성 — RECORDING
+    // ============================================
+
+    async function toggleRecording() {
+        if (isRecording) {
+            stopRecording();
+        } else {
+            await startRecording();
+        }
+    }
+
+    async function startRecording() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            recordingChunks = [];
+
+            mediaRecorder = new MediaRecorder(stream, {
+                mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+                    ? 'audio/webm;codecs=opus'
+                    : 'audio/webm',
+            });
+
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) {
+                    recordingChunks.push(e.data);
+                }
+            };
+
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(recordingChunks, { type: mediaRecorder.mimeType });
+                const durationMs = Date.now() - recordingStartTime;
+                stream.getTracks().forEach(t => t.stop());
+                uploadClip(blob, durationMs);
+            };
+
+            mediaRecorder.start(1000); // collect in 1s chunks
+            isRecording = true;
+            recordingStartTime = Date.now();
+
+            // UI updates
+            recordBtn.classList.add('recording');
+            recordIcon.textContent = '⏹';
+            recordLabel.textContent = 'Recording... tap to stop';
+            audioLevelBars.classList.remove('hidden');
+            startRecordingTimer();
+
+            // Auto-stop after 5 minutes
+            maxDurationTimeout = setTimeout(() => {
+                if (isRecording) {
+                    stopRecording();
+                    showNotification('Recording auto-stopped (5 min max) ⏱️');
+                }
+            }, MAX_RECORDING_DURATION_MS);
+
+        } catch (err) {
+            showRecordError('Microphone access denied. Please allow mic access.');
+            console.error('Mic error:', err);
+        }
+    }
+
+    function stopRecording() {
+        if (!isRecording || !mediaRecorder) return;
+
+        if (maxDurationTimeout) {
+            clearTimeout(maxDurationTimeout);
+            maxDurationTimeout = null;
+        }
+
+        mediaRecorder.stop();
+        isRecording = false;
+
+        // UI updates
+        recordBtn.classList.remove('recording');
+        recordIcon.textContent = '🎤';
+        recordLabel.textContent = 'Tap to record';
+        audioLevelBars.classList.add('hidden');
+        stopRecordingTimer();
+    }
+
+    function startRecordingTimer() {
+        recordTimer.textContent = '0:00';
+        recordingTimerInterval = setInterval(() => {
+            const elapsed = Date.now() - recordingStartTime;
+            recordTimer.textContent = formatDuration(elapsed);
+        }, 100);
+    }
+
+    function stopRecordingTimer() {
+        if (recordingTimerInterval) {
+            clearInterval(recordingTimerInterval);
+            recordingTimerInterval = null;
+        }
+        recordTimer.textContent = '0:00';
+    }
+
+    async function uploadClip(blob, durationMs) {
+        // Show uploading state in clip list
+        const tempId = 'uploading-' + Date.now();
+        addTempClipCard(tempId, durationMs);
+
+        const formData = new FormData();
+        formData.append('audio', blob, `clip-${Date.now()}.webm`);
+        formData.append('duration_ms', String(Math.round(durationMs)));
+
+        try {
+            const res = await api('/api/clips', {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                // Reload clips from server to get the full list
+                await loadClips();
+                showNotification('Clip saved ✓');
+            } else {
+                const errData = await res.json().catch(() => ({}));
+                removeTempClipCard(tempId);
+                showRecordError(errData.error || 'Failed to upload clip');
+            }
+        } catch (err) {
+            removeTempClipCard(tempId);
+            showRecordError('Upload failed: ' + err.message);
+        }
+    }
+
+    async function loadClips() {
+        try {
+            const res = await api('/api/clips');
+            if (!res.ok) return;
+
+            clips = await res.json();
+            renderClips();
+            updateClipSummary();
+            updateGenerateFromClipsBtn();
+        } catch {
+            // ignore
+        }
+    }
+
+    function renderClips() {
+        if (!clips || clips.length === 0) {
+            clipList.innerHTML = `
+                <div class="empty-state clip-empty">
+                    <span class="empty-icon">🎙️</span>
+                    <p>No recordings yet. Hit the mic to start!</p>
+                </div>
+            `;
+            return;
+        }
+
+        clipList.innerHTML = clips.map((clip, i) => {
+            const date = new Date(clip.created_at).toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+            });
+            return `
+                <div class="clip-card" id="clip-${clip.id}">
+                    <div class="clip-index">${i + 1}</div>
+                    <div class="clip-info">
+                        <div class="clip-duration">${formatDuration(clip.duration_ms)}</div>
+                        <div class="clip-time">${date}</div>
+                    </div>
+                    <div class="clip-actions">
+                        <button class="clip-play-btn" onclick="window.vibeApp.playClip('${clip.id}')" title="Play">▶</button>
+                        <button class="clip-delete-btn" onclick="window.vibeApp.deleteClip('${clip.id}')" title="Delete">✕</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function addTempClipCard(tempId, durationMs) {
+        // Remove empty state if present
+        const empty = clipList.querySelector('.clip-empty');
+        if (empty) empty.remove();
+
+        const card = document.createElement('div');
+        card.className = 'clip-card';
+        card.id = tempId;
+        card.innerHTML = `
+            <div class="clip-index">•</div>
+            <div class="clip-info">
+                <div class="clip-duration">${formatDuration(durationMs)}</div>
+                <div class="clip-time">Uploading...</div>
+            </div>
+            <div class="clip-actions">
+                <div class="clip-uploading">
+                    <span class="spinner"></span>
+                </div>
+            </div>
+        `;
+        clipList.appendChild(card);
+    }
+
+    function removeTempClipCard(tempId) {
+        const el = document.getElementById(tempId);
+        if (el) el.remove();
+    }
+
+    function updateClipSummary() {
+        const count = clips ? clips.length : 0;
+        const totalMs = clips ? clips.reduce((sum, c) => sum + c.duration_ms, 0) : 0;
+        clipCount.textContent = `${count} clip${count !== 1 ? 's' : ''}`;
+        clipTotalDuration.textContent = `${formatDuration(totalMs)} total`;
+    }
+
+    function updateGenerateFromClipsBtn() {
+        const hasClips = clips && clips.length > 0;
+        generateFromClipsBtn.disabled = !hasClips;
+    }
+
+    async function playClip(clipId) {
+        try {
+            const res = await api(`/api/clips/${clipId}/download`);
+            if (!res.ok) throw new Error('Failed to load clip');
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            playerAudio.src = url;
+            playerTitle.textContent = `Clip #${getClipIndex(clipId)}`;
+            audioPlayer.classList.remove('hidden');
+            playerAudio.play();
+        } catch (err) {
+            showRecordError('Error playing clip: ' + err.message);
+        }
+    }
+
+    async function deleteClip(clipId) {
+        try {
+            const res = await api(`/api/clips/${clipId}`, { method: 'DELETE' });
+            if (res.ok) {
+                await loadClips();
+                showNotification('Clip deleted');
+            } else {
+                const errData = await res.json().catch(() => ({}));
+                showRecordError(errData.error || 'Failed to delete clip');
+            }
+        } catch (err) {
+            showRecordError('Delete failed: ' + err.message);
+        }
+    }
+
+    function getClipIndex(clipId) {
+        if (!clips) return '?';
+        const idx = clips.findIndex(c => c.id === clipId);
+        return idx >= 0 ? idx + 1 : '?';
+    }
+
+    // --- Generate From Clips ---
+    async function handleGenerateFromClips() {
+        if (!clips || clips.length === 0) {
+            showRecordError('Record some clips first!');
+            return;
+        }
+
+        const style = document.querySelector('input[name="rec_style"]:checked').value;
+        const voice = document.querySelector('input[name="rec_voice"]:checked').value;
+        const lyricType = document.querySelector('input[name="rec_lyric_type"]:checked').value;
+
+        // Show loading
+        generateFromClipsBtn.disabled = true;
+        generateFromClipsBtn.querySelector('.btn-text').classList.add('hidden');
+        generateFromClipsBtn.querySelector('.btn-loading').classList.remove('hidden');
+        recordError.classList.add('hidden');
+
+        const formData = new FormData();
+        formData.append('source', 'clips');
+        formData.append('style', style);
+        formData.append('voice', voice);
+        formData.append('lyric_type', lyricType);
+
+        try {
+            const res = await api('/api/compose', {
+                method: 'POST',
+                body: formData,
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                activeCompositionId = data.id;
+                // Switch to compose tab to show progress
+                switchTab('compose');
+                showActiveGeneration();
+                startPolling(data.id);
+                showNotification(`Brewing ${clips.length} clips into music... 🍶`);
+            } else if (res.status === 409) {
+                showRecordError(data.error || 'You already have a composition in progress!');
+            } else {
+                showRecordError(data.error || 'Something went wrong');
+            }
+        } catch (err) {
+            showRecordError('Connection error: ' + err.message);
+        } finally {
+            generateFromClipsBtn.disabled = false;
+            generateFromClipsBtn.querySelector('.btn-text').classList.remove('hidden');
+            generateFromClipsBtn.querySelector('.btn-loading').classList.add('hidden');
+            updateGenerateFromClipsBtn();
+        }
+    }
+
+    function showRecordError(msg) {
+        recordError.textContent = msg;
+        recordError.classList.remove('hidden');
+    }
+
     // --- Library ---
     async function loadCompositions() {
         try {
@@ -413,9 +713,11 @@
             const styleInfo = styleMap[comp.music_style] || { emoji: '🎵', name: comp.music_style };
             const styleEmoji = styleInfo.emoji;
             const styleName = styleInfo.name;
-            const inputPreview = comp.input_text
-                ? truncate(comp.input_text, 100)
-                : `🎤 Audio input`;
+            const inputPreview = comp.input_type === 'clips'
+                ? `🎙️ ${comp.input_text || 'Generated from clips'}`
+                : comp.input_text
+                    ? truncate(comp.input_text, 100)
+                    : `🎤 Audio input`;
             const date = new Date(comp.created_at).toLocaleDateString('en-US', {
                 month: 'short',
                 day: 'numeric',
@@ -559,6 +861,14 @@
         return div.innerHTML;
     }
 
+    function formatDuration(ms) {
+        if (!ms || ms < 0) return '0:00';
+        const totalSec = Math.floor(ms / 1000);
+        const min = Math.floor(totalSec / 60);
+        const sec = totalSec % 60;
+        return `${min}:${sec.toString().padStart(2, '0')}`;
+    }
+
     // --- Event Binding ---
     function bindEvents() {
         // Login
@@ -568,31 +878,6 @@
         // Tabs
         tabBtns.forEach(btn => {
             btn.addEventListener('click', () => switchTab(btn.dataset.tab));
-        });
-
-        // Input modes
-        modeTextBtn.addEventListener('click', () => switchMode('text'));
-        modeAudioBtn.addEventListener('click', () => switchMode('audio'));
-
-        // Audio upload
-        audioDropZone.addEventListener('click', () => audioFileInput.click());
-        audioFileInput.addEventListener('change', (e) => {
-            if (e.target.files[0]) handleAudioFile(e.target.files[0]);
-        });
-        removeAudioBtn.addEventListener('click', removeAudio);
-
-        // Drag and drop
-        audioDropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            audioDropZone.classList.add('dragover');
-        });
-        audioDropZone.addEventListener('dragleave', () => {
-            audioDropZone.classList.remove('dragover');
-        });
-        audioDropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            audioDropZone.classList.remove('dragover');
-            if (e.dataTransfer.files[0]) handleAudioFile(e.dataTransfer.files[0]);
         });
 
         // Style selection
@@ -610,8 +895,19 @@
             radio.addEventListener('change', updateLyricTypeSelection);
         });
 
+        // Record tab style selections
+        ['rec_style', 'rec_voice', 'rec_lyric_type'].forEach(groupName => {
+            document.querySelectorAll(`input[name="${groupName}"]`).forEach(radio => {
+                radio.addEventListener('change', () => updateRecOptionSelection(groupName));
+            });
+        });
+
         // Generate
         generateBtn.addEventListener('click', handleCompose);
+
+        // Record
+        recordBtn.addEventListener('click', toggleRecording);
+        generateFromClipsBtn.addEventListener('click', handleGenerateFromClips);
 
         // Library
         refreshBtn.addEventListener('click', loadCompositions);
@@ -625,8 +921,11 @@
         play: playComposition,
         download: downloadComposition,
         toggleLyrics: toggleLyrics,
+        playClip: playClip,
+        deleteClip: deleteClip,
     };
 
     // --- Start ---
     init();
 })();
+

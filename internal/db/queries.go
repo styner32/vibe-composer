@@ -178,3 +178,92 @@ func (q *Queries) UpdateGeneratedLyrics(ctx context.Context, id, lyrics string) 
 	)
 	return err
 }
+
+// ============================================
+// CLIPS (숙성 — Maturation Recording)
+// ============================================
+
+// Clip represents a single audio recording clip.
+type Clip struct {
+	ID         string    `json:"id"`
+	Username   string    `json:"username"`
+	AudioURL   string    `json:"audio_url"`
+	DurationMs int       `json:"duration_ms"`
+	SizeBytes  int       `json:"size_bytes"`
+	MimeType   string    `json:"mime_type"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+// CreateClip inserts a new clip and returns its ID.
+func (q *Queries) CreateClip(ctx context.Context, c *Clip) (string, error) {
+	var id string
+	err := q.pool.QueryRow(ctx,
+		`INSERT INTO clips (username, audio_url, duration_ms, size_bytes, mime_type)
+		 VALUES ($1, $2, $3, $4, $5)
+		 RETURNING id`,
+		c.Username, c.AudioURL, c.DurationMs, c.SizeBytes, c.MimeType,
+	).Scan(&id)
+	if err != nil {
+		return "", fmt.Errorf("inserting clip: %w", err)
+	}
+	return id, nil
+}
+
+// ListClips retrieves all clips for a user, ordered by creation time.
+func (q *Queries) ListClips(ctx context.Context, username string) ([]*Clip, error) {
+	rows, err := q.pool.Query(ctx,
+		`SELECT id, username, audio_url, duration_ms, size_bytes, mime_type, created_at
+		 FROM clips WHERE username = $1
+		 ORDER BY created_at ASC`, username,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("listing clips: %w", err)
+	}
+	defer rows.Close()
+
+	var clips []*Clip
+	for rows.Next() {
+		c := &Clip{}
+		if err := rows.Scan(
+			&c.ID, &c.Username, &c.AudioURL, &c.DurationMs, &c.SizeBytes, &c.MimeType, &c.CreatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scanning clip: %w", err)
+		}
+		clips = append(clips, c)
+	}
+	return clips, nil
+}
+
+// GetClip retrieves a single clip by ID.
+func (q *Queries) GetClip(ctx context.Context, id string) (*Clip, error) {
+	c := &Clip{}
+	err := q.pool.QueryRow(ctx,
+		`SELECT id, username, audio_url, duration_ms, size_bytes, mime_type, created_at
+		 FROM clips WHERE id = $1`, id,
+	).Scan(&c.ID, &c.Username, &c.AudioURL, &c.DurationMs, &c.SizeBytes, &c.MimeType, &c.CreatedAt)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("getting clip: %w", err)
+	}
+	return c, nil
+}
+
+// DeleteClip removes a clip by ID (with username ownership check).
+func (q *Queries) DeleteClip(ctx context.Context, id, username string) error {
+	_, err := q.pool.Exec(ctx,
+		`DELETE FROM clips WHERE id = $1 AND username = $2`,
+		id, username,
+	)
+	return err
+}
+
+// UpdateClipAudioURL sets the GCS audio URL for a clip after upload.
+func (q *Queries) UpdateClipAudioURL(ctx context.Context, id, audioURL string) error {
+	_, err := q.pool.Exec(ctx,
+		`UPDATE clips SET audio_url = $1 WHERE id = $2`,
+		audioURL, id,
+	)
+	return err
+}

@@ -73,6 +73,15 @@ func (g *GCS) SignedURL(ctx context.Context, path string, expiry time.Duration) 
 	return url, nil
 }
 
+// Delete removes an object from GCS.
+func (g *GCS) Delete(ctx context.Context, path string) error {
+	if err := g.client.Bucket(g.bucket).Object(path).Delete(ctx); err != nil {
+		return fmt.Errorf("deleting GCS object: %w", err)
+	}
+	slog.Info("deleted from GCS", "path", path)
+	return nil
+}
+
 // Close closes the GCS client.
 func (g *GCS) Close() error {
 	return g.client.Close()

@@ -122,6 +122,12 @@ func main() {
 		r.Get("/compositions", h.ListCompositions)
 		r.Get("/compositions/{id}", h.GetComposition)
 		r.Get("/compositions/{id}/download", h.DownloadComposition)
+
+		// Clip routes (숙성 — Maturation Recording)
+		r.Post("/clips", h.CreateClip)
+		r.Get("/clips", h.ListClips)
+		r.Delete("/clips/{id}", h.DeleteClip)
+		r.Get("/clips/{id}/download", h.DownloadClip)
 	})
 
 	// Start server

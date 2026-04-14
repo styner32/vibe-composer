@@ -922,6 +922,298 @@ textarea::placeholder {
 }
 
 /* ============================================
+   RECORD TAB (숙성 — Maturation Recording)
+   ============================================ */
+.record-card {
+    padding: var(--space-2xl);
+}
+
+/* Recording Controls */
+.record-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-lg);
+    margin: var(--space-xl) 0;
+}
+
+.record-btn {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform var(--transition-base);
+}
+
+.record-btn:hover {
+    transform: scale(1.05);
+}
+
+.record-btn:active {
+    transform: scale(0.95);
+}
+
+.record-btn-inner {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #7c3aed, #a855f7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 24px rgba(124, 58, 237, 0.4);
+    transition: all var(--transition-base);
+    z-index: 1;
+    position: relative;
+}
+
+.record-btn.recording .record-btn-inner {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    box-shadow: 0 4px 24px rgba(239, 68, 68, 0.5);
+    border-radius: 16px;
+    width: 60px;
+    height: 60px;
+}
+
+.record-icon {
+    font-size: 2rem;
+    transition: all var(--transition-base);
+}
+
+.record-btn.recording .record-icon {
+    font-size: 1.5rem;
+}
+
+.record-ring {
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    border: 3px solid rgba(124, 58, 237, 0.3);
+    top: 0;
+    left: 0;
+    transition: all var(--transition-base);
+}
+
+.record-btn.recording .record-ring {
+    border-color: rgba(239, 68, 68, 0.4);
+    animation: recordPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes recordPulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.3); opacity: 0.3; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.record-status {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.record-timer {
+    font-family: 'Space Grotesk', monospace;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: 0.05em;
+}
+
+.record-btn.recording ~ .record-status .record-timer {
+    color: #ef4444;
+}
+
+.record-label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+/* Audio Level Bars */
+.audio-level-bars {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 40px;
+    margin: var(--space-md) 0;
+}
+
+.level-bar {
+    width: 6px;
+    border-radius: 3px;
+    background: linear-gradient(to top, #7c3aed, #ec4899);
+    animation: levelBounce 0.8s ease-in-out infinite;
+}
+
+.level-bar:nth-child(1) { height: 15px; animation-delay: 0s; }
+.level-bar:nth-child(2) { height: 25px; animation-delay: 0.1s; }
+.level-bar:nth-child(3) { height: 35px; animation-delay: 0.2s; }
+.level-bar:nth-child(4) { height: 40px; animation-delay: 0.15s; }
+.level-bar:nth-child(5) { height: 30px; animation-delay: 0.25s; }
+.level-bar:nth-child(6) { height: 20px; animation-delay: 0.05s; }
+.level-bar:nth-child(7) { height: 12px; animation-delay: 0.3s; }
+
+@keyframes levelBounce {
+    0%, 100% { transform: scaleY(0.4); opacity: 0.5; }
+    50% { transform: scaleY(1); opacity: 1; }
+}
+
+/* Clip Summary */
+.clip-summary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    margin: var(--space-md) 0;
+    background: rgba(124, 58, 237, 0.08);
+    border-radius: var(--radius-full);
+    border: 1px solid rgba(124, 58, 237, 0.15);
+}
+
+.clip-count {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-accent);
+}
+
+.clip-separator {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+}
+
+.clip-total-duration {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+/* Clip List */
+.clip-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    margin: var(--space-lg) 0;
+}
+
+.clip-empty {
+    padding: var(--space-xl);
+}
+
+.clip-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md) var(--space-lg);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-base);
+    animation: fadeInUp 0.3s ease;
+}
+
+.clip-card:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: var(--border-glass);
+}
+
+.clip-index {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(124, 58, 237, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-accent);
+    flex-shrink: 0;
+}
+
+.clip-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.clip-duration {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.clip-time {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.clip-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    flex-shrink: 0;
+}
+
+.clip-play-btn,
+.clip-delete-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--border-glass);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    transition: all var(--transition-base);
+}
+
+.clip-play-btn:hover {
+    background: rgba(124, 58, 237, 0.15);
+    border-color: rgba(124, 58, 237, 0.3);
+    color: var(--text-accent);
+}
+
+.clip-delete-btn:hover {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+}
+
+.clip-uploading {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.clip-uploading .spinner {
+    width: 14px;
+    height: 14px;
+}
+
+/* Record Generate Section */
+.record-generate-section {
+    margin-top: var(--space-lg);
+}
+
+.record-divider {
+    height: 1px;
+    background: var(--border-subtle);
+    margin: var(--space-xl) 0;
+}
+
+/* ============================================
    AUDIO PLAYER (Floating)
    ============================================ */
 .audio-player {
