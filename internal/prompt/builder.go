@@ -19,6 +19,14 @@ func Build(analysis *analyzer.AudioAnalysis, style string, voiceGender string, l
 		base = buildHiphop(analysis, lyrics)
 	case "pansori":
 		base = buildPansori(analysis, lyrics)
+	case "drill":
+		base = buildDrill(analysis, lyrics)
+	case "jazzhop":
+		base = buildJazzhop(analysis, lyrics)
+	case "epic_pansori":
+		base = buildEpicPansori(analysis, lyrics)
+	case "kswagger":
+		base = buildKSwagger(analysis, lyrics)
 	default:
 		base = buildFunny(analysis, lyrics)
 	}
@@ -59,7 +67,7 @@ Musical direction:
 - Make it catchy with a memorable chorus
 - Include at least one spoken-word breakdown where the singer gets increasingly petty
 - The overall tone should make someone who was angry burst out laughing
-- About 2 minutes long
+- About 1.5 minutes long
 
 The angrier the emotion, the funnier and more ridiculous the song should be.`,
 		lyrics,
@@ -92,7 +100,7 @@ Musical direction:
 - Build from seething verses to an explosive chorus
 - Include a bridge that's a moment of eerie calm before the final eruption
 - The overall message: "I will not be broken by this"
-- About 2 minutes long
+- About 1.5 minutes long
 
 This song should feel like screaming into a void and hearing the void scream back in solidarity.`,
 		lyrics,
@@ -126,7 +134,7 @@ Musical direction:
 - Build intensity: start with a menacing verse, escalate to an aggressive chorus, drop a fire bridge with double-time flow
 - Add ad-libs ("yeah!", "let's go!", "uh!") where they hit hardest
 - The overall vibe: the person went from being upset to absolutely owning the situation
-- About 2 minutes long
+- About 1.5 minutes long
 
 This track should make the listener feel like they just dropped the hardest diss track of the year.`,
 		lyrics,
@@ -160,9 +168,145 @@ Musical direction:
 - Structure: begin with an 아니리 (spoken narrative intro), then launch into passionate 창 (singing) passages with theatrical emotional peaks
 - Rhythm: use traditional 장단 (jangdan) rhythmic patterns — 중모리 for storytelling, 자진모리 for building tension, 휘모리 for climactic moments
 - The overall feeling: a grand, theatrical retelling elevated to legendary proportions
-- About 2 minutes long
+- About 1.5 minutes long
 
 This should feel like a master 광대 (gwangdae, pansori performer) dramatically recounting woes to a spellbound audience, turning everyday frustration into an epic Korean saga.`,
+		lyrics,
+		a.PrimaryEmotion,
+		intensityDesc,
+		vocalContext,
+		a.Summary,
+	)
+}
+
+func buildDrill(a *analyzer.AudioAnalysis, lyrics string) string {
+	intensityDesc := intensityToDrillDesc(a.EmotionIntensity)
+	vocalContext := ""
+	if len(a.VocalTraits) > 0 {
+		vocalContext = fmt.Sprintf(" The person was %s.", strings.Join(a.VocalTraits, " and "))
+	}
+
+	return fmt.Sprintf(`Create a menacing, cold-fury drill track using the lyrics below.
+
+Lyrics to use for the song:
+%s
+
+Emotion analysis: %s (intensity: %s).%s
+Context: %s
+
+Musical direction:
+- Genre: Dark UK Drill / Aggressive Hip-hop
+- Instrumentation: Sliding distorted 808 sub-bass, sharp metallic hi-hats with rapid patterns, ominous minor-key piano loops, eerie atmospheric pads
+- Flow: Cold, deadpan, and whispery delivery that escalates into rapid-fire triplets (drill flow). Use sharp, rhythmic switches to channel "cold fury."
+- Dynamics: Start with a menacing, sparse beat; build tension with sliding bass; drop a heavy, aggressive chorus
+- Ad-libs: Add sharp, rhythmic ad-libs ("Look", "Listen", "Yeah") to emphasize the warning tone
+- Use the provided lyrics as the vocal content — they are already written in the correct style and language
+- The overall vibe: A menacing WARNING to a villain. Calm but terrifying authority. "Don't cross the line."
+- About 1.5 minutes long
+
+This track should feel like a cold, calculated warning — the calm before the storm that never needs to come because the threat alone is enough.`,
+		lyrics,
+		a.PrimaryEmotion,
+		intensityDesc,
+		vocalContext,
+		a.Summary,
+	)
+}
+
+func buildJazzhop(a *analyzer.AudioAnalysis, lyrics string) string {
+	intensityDesc := intensityToJazzhopDesc(a.EmotionIntensity)
+	vocalContext := ""
+	if len(a.VocalTraits) > 0 {
+		vocalContext = fmt.Sprintf(" The person was %s while expressing this.", strings.Join(a.VocalTraits, " and "))
+	}
+
+	return fmt.Sprintf(`Create a sarcastic, darkly witty jazz-hop track using the lyrics below.
+
+Lyrics to use for the song:
+%s
+
+Emotion analysis: %s (intensity: %s).%s
+Context: %s
+
+Musical direction:
+- Genre: Sarcastic Jazz-hop / Old-school Boom-bap
+- Instrumentation: Lo-fi vinyl crackle, dusty drum breaks, laid-back jazzy piano chords, soulful upright bass, muted trumpet accents
+- Flow: Lazy, conversational, and cynical flow. Start with a "Spoken Word" style intro that mimics a world-weary inner monologue
+- Structure: Relaxed but biting verses over boom-bap drums, smooth but sarcastic melodic hook
+- Tone: Deeply cynical and bone-tired exhaustion. "I'm so over this" energy with a touch of dark humor and resignation
+- Use the provided lyrics as the vocal content — they are already written in the correct style and language
+- The vibe is a burnt-out genius delivering the most devastating observations with a yawn
+- About 1.5 minutes long
+
+This track should feel like someone who's seen it all, leaning back with a coffee, narrating the absurdity of everything with a smirk that hides genuine exhaustion.`,
+		lyrics,
+		a.PrimaryEmotion,
+		intensityDesc,
+		vocalContext,
+		a.Summary,
+	)
+}
+
+func buildEpicPansori(a *analyzer.AudioAnalysis, lyrics string) string {
+	intensityDesc := intensityToEpicPansoriDesc(a.EmotionIntensity)
+	vocalContext := ""
+	if len(a.VocalTraits) > 0 {
+		vocalContext = fmt.Sprintf(" The person was %s while expressing this.", strings.Join(a.VocalTraits, " and "))
+	}
+
+	return fmt.Sprintf(`Create an epic, cinematic 판소리 (pansori) orchestral piece using the lyrics below.
+
+Lyrics to use for the song:
+%s
+
+Emotion analysis: %s (intensity: %s).%s
+Context: %s
+
+Musical direction:
+- Genre: Epic Cinematic Pansori — Korean traditional narrative elevated to cinematic orchestral scale
+- Instrumentation: Heavy 북 (buk/barrel drum) syncopated with 아쟁 (ajaeng, deep raspy bowed string) and 해금 (haegeum, sorrowful fiddle). Layer with cinematic orchestral percussion (taiko-style hits, timpani rolls) for grand scale
+- Vocals: Powerful, guttural 수리성 (suriseong, raspy pansori voice). Dramatic shifts between 계면조 (gyemyeonjo, sorrowful minor mode) and 우조 (ujo, majestic/angry major mode)
+- Structure: Begin with a long, theatrical 아니리 (aniri, spoken narrative passage) that draws the listener in; then EXPLODE into high-pitched 창 (chang, singing) with extreme emotional peaks
+- Rhythm: Transition from 중모리 (jungmori, slow storytelling tempo) → 자진모리 (jajinmori, building tension and speed) → 휘모리 (hwimori, furious climactic speed)
+- Use the provided lyrics as the vocal content — they are already written with proper syllabic meter and exclamatory particles
+- The overall feeling: a GRAND, theatrical retelling of a personal struggle elevated to LEGENDARY proportions — like a mythic saga
+- About 1.5 minutes long
+
+This should feel like the most dramatic moment in a Korean epic — the hero's fury shaking heaven and earth, performed by a master 광대 (gwangdae) with the full weight of cinematic orchestration behind every cry.`,
+		lyrics,
+		a.PrimaryEmotion,
+		intensityDesc,
+		vocalContext,
+		a.Summary,
+	)
+}
+
+func buildKSwagger(a *analyzer.AudioAnalysis, lyrics string) string {
+	intensityDesc := intensityToKSwaggerDesc(a.EmotionIntensity)
+	vocalContext := ""
+	if len(a.VocalTraits) > 0 {
+		vocalContext = fmt.Sprintf(" The person was %s while expressing this.", strings.Join(a.VocalTraits, " and "))
+	}
+
+	return fmt.Sprintf(`Create a powerful K-Swagger (판소리 x 트랩 퓨전) track using the lyrics below.
+
+Lyrics to use for the song:
+%s
+
+Emotion analysis: %s (intensity: %s).%s
+Context: %s
+
+Musical direction:
+- Genre: K-Swagger / Pansori-Trap Fusion — the ultimate Korean fusion of traditional power and modern aggression
+- Instrumentation: High-pitched piercing 태평소 (taepyeongso, Korean horn) riffs, aggressive distorted electric guitar, heavy 808 trap bass drops, and traditional 자진모리 (jajinmori) rhythmic claps
+- Vocal Design: Pansori master vocals for the main melody using powerful 창 (chang) technique; add a hip-hop "hype-man" voice for traditional 추임새 (chuimsae) ad-libs ("얼씨구!", "좋다!", "이히!", "잘한다!")
+- Rhythmic Fusion: Syncopate traditional 12/8 자진모리 grooves with modern 4/4 trap hi-hat patterns — the rhythm should feel like tradition and modernity COLLIDING
+- Build-up: Start with a deep pansori growl over a slow, minimal beat; ESCALATE into a high-energy trap drop with 태평소 (taepyeongso) blasts cutting through the 808s
+- Use the provided lyrics as the vocal content — they are already written in the correct style and language
+- The overall vibe: COMPLETE DOMINANCE. The "Legendary Master" returns to crush all opposition with ultimate swagger
+- About 1.5 minutes long
+
+This is the NSZ signature sound — ancient Korean vocal power fused with modern trap energy. It should feel like a 소리꾼 (master singer) descended from a mountain to absolutely DESTROY a trap beat with unstoppable force.`,
 		lyrics,
 		a.PrimaryEmotion,
 		intensityDesc,
@@ -228,5 +372,65 @@ func intensityToHarshDesc(intensity int) string {
 		return "cold, calculated bitterness"
 	default:
 		return "quiet, smoldering discontent"
+	}
+}
+
+func intensityToDrillDesc(intensity int) string {
+	switch {
+	case intensity >= 9:
+		return "ice-cold, executioner-level menace"
+	case intensity >= 7:
+		return "dead-eyed, don't-test-me warning"
+	case intensity >= 5:
+		return "quiet storm, coiled-and-ready tension"
+	case intensity >= 3:
+		return "sharp-eyed, watching-from-the-shadows"
+	default:
+		return "cold shoulder, dismissive-and-unbothered"
+	}
+}
+
+func intensityToJazzhopDesc(intensity int) string {
+	switch {
+	case intensity >= 9:
+		return "completely burnt-out, soul-has-left-the-building exhaustion"
+	case intensity >= 7:
+		return "deeply jaded, seen-every-trick cynicism"
+	case intensity >= 5:
+		return "sarcastically amused, slow-clapping energy"
+	case intensity >= 3:
+		return "mildly detached, whatever-helps-you-sleep resignation"
+	default:
+		return "gently apathetic, is-it-friday-yet boredom"
+	}
+}
+
+func intensityToEpicPansoriDesc(intensity int) string {
+	switch {
+	case intensity >= 9:
+		return "천하를 뒤흔드는 (world-shaking) apocalyptic wrath"
+	case intensity >= 7:
+		return "산이 울리는 (mountain-echoing) thunderous rage"
+	case intensity >= 5:
+		return "깊은 한 (deep han) — a wound that will not heal"
+	case intensity >= 3:
+		return "서러운 (sorrowful) lament carried on the wind"
+	default:
+		return "고요한 비통 (quiet grief) before the storm"
+	}
+}
+
+func intensityToKSwaggerDesc(intensity int) string {
+	switch {
+	case intensity >= 9:
+		return "전설적인 (legendary) — the master has descended from the mountain"
+	case intensity >= 7:
+		return "압도적인 (overwhelming) — crushing dominance"
+	case intensity >= 5:
+		return "당당한 (confident) — unshakeable swagger"
+	case intensity >= 3:
+		return "느긋한 카리스마 (relaxed charisma) — effortless cool"
+	default:
+		return "잠에서 깬 호랑이 (waking tiger) — calm power"
 	}
 }

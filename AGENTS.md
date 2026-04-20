@@ -356,6 +356,10 @@ Label each section: [Verse 1] [Hook] [Verse 2] [Bridge] etc.
 | Metal | `harsh` | Cathartic heavy rock/metal — raw screaming energy |
 | Hip-hop | `hiphop` | Trap beats, 808 bass, diss-track energy |
 | Pansori | `pansori` | Korean traditional dramatic singing with buk drum |
+| Dark Drill | `drill` | Cold-fury UK Drill — menacing warning with sliding 808s |
+| Jazz-hop | `jazzhop` | Sarcastic lo-fi jazz-hop — cynical burnout with dark humor |
+| Epic Pansori | `epic_pansori` | Cinematic orchestral pansori — legendary-scale wrath |
+| K-Swagger | `kswagger` | Pansori × Trap fusion — NSZ signature style, ultimate dominance |
 
 Each style has its own prompt builder function in `internal/prompt/builder.go`.
 
@@ -374,7 +378,7 @@ Each style has its own prompt builder function in `internal/prompt/builder.go`.
 | `input_text` | TEXT | User's raw text (or transcription for audio) |
 | `input_audio_url` | TEXT | GCS path for uploaded audio |
 | `emotion` | TEXT | JSON blob from analyzer |
-| `music_style` | TEXT | `funny`, `harsh`, `hiphop`, `pansori` |
+| `music_style` | TEXT | `funny`, `harsh`, `hiphop`, `pansori`, `drill`, `jazzhop`, `epic_pansori`, `kswagger` |
 | `voice_gender` | TEXT | `male`, `female`, `any` |
 | `lyric_type` | TEXT | `arc`, `immersion` |
 | `music_prompt` | TEXT | Final prompt sent to Lyria |
@@ -408,7 +412,7 @@ They run sequentially by filename on `make migrate`.
 |-------|------|----------|--------|
 | `text` | string | if no audio | Raw text input |
 | `audio` | file | if no text | Audio file (max 25MB) |
-| `style` | string | no | `funny` (default), `harsh`, `hiphop`, `pansori` |
+| `style` | string | no | `funny` (default), `harsh`, `hiphop`, `pansori`, `drill`, `jazzhop`, `epic_pansori`, `kswagger` |
 | `voice` | string | no | `any` (default), `male`, `female` |
 | `lyric_type` | string | no | `arc` (default), `immersion` |
 

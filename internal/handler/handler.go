@@ -68,9 +68,9 @@ func (h *Handler) Compose(w http.ResponseWriter, r *http.Request) {
 	if style == "" {
 		style = "funny"
 	}
-	validStyles := map[string]bool{"funny": true, "harsh": true, "hiphop": true, "pansori": true}
+	validStyles := map[string]bool{"funny": true, "harsh": true, "hiphop": true, "pansori": true, "drill": true, "jazzhop": true, "epic_pansori": true, "kswagger": true}
 	if !validStyles[style] {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "style must be 'funny', 'harsh', 'hiphop', or 'pansori'"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid style"})
 		return
 	}
 

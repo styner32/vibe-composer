@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"google.golang.org/genai"
 )
@@ -87,8 +88,9 @@ func (a *Analyzer) AnalyzeAudio(ctx context.Context, audioData []byte, mimeType 
 	text := result.Candidates[0].Content.Parts[0].Text
 	slog.Info("audio analysis response", "raw", text)
 
+	cleaned := cleanJSON(text)
 	var analysis AudioAnalysis
-	if err := json.Unmarshal([]byte(text), &analysis); err != nil {
+	if err := json.Unmarshal([]byte(cleaned), &analysis); err != nil {
 		return nil, fmt.Errorf("parsing analysis JSON: %w (raw: %s)", err, text)
 	}
 
@@ -144,10 +146,66 @@ Rules:
 
 	respText := result.Candidates[0].Content.Parts[0].Text
 
+	cleaned := cleanJSON(respText)
 	var analysis AudioAnalysis
-	if err := json.Unmarshal([]byte(respText), &analysis); err != nil {
+	if err := json.Unmarshal([]byte(cleaned), &analysis); err != nil {
 		return nil, fmt.Errorf("parsing analysis JSON: %w (raw: %s)", err, respText)
 	}
 
 	return &analysis, nil
+}
+
+// cleanJSON extracts the first valid JSON object from a string.
+// Gemini sometimes returns trailing characters (extra braces, whitespace)
+// after the JSON object, causing parse failures.
+func cleanJSON(s string) string {
+	s = strings.TrimSpace(s)
+	// Strip markdown code fences if present
+	if strings.HasPrefix(s, "```") {
+		if idx := strings.Index(s, "\n"); idx != -1 {
+			s = s[idx+1:]
+		}
+		if idx := strings.LastIndex(s, "```"); idx != -1 {
+			s = s[:idx]
+		}
+		s = strings.TrimSpace(s)
+	}
+
+	// Find the first '{' and its matching '}'
+	start := strings.Index(s, "{")
+	if start == -1 {
+		return s
+	}
+
+	depth := 0
+	inString := false
+	escaped := false
+	for i := start; i < len(s); i++ {
+		c := s[i]
+		if escaped {
+			escaped = false
+			continue
+		}
+		if c == '\\' && inString {
+			escaped = true
+			continue
+		}
+		if c == '"' {
+			inString = !inString
+			continue
+		}
+		if inString {
+			continue
+		}
+		if c == '{' {
+			depth++
+		} else if c == '}' {
+			depth--
+			if depth == 0 {
+				return s[start : i+1]
+			}
+		}
+	}
+
+	return s[start:]
 }

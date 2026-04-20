@@ -51,6 +51,10 @@
     const styleHarshLabel = $('#style-harsh-label');
     const styleHiphopLabel = $('#style-hiphop-label');
     const stylePansoriLabel = $('#style-pansori-label');
+    const styleDrillLabel = $('#style-drill-label');
+    const styleJazzhopLabel = $('#style-jazzhop-label');
+    const styleEpicPansoriLabel = $('#style-epic-pansori-label');
+    const styleKswaggerLabel = $('#style-kswagger-label');
     const voiceAnyLabel = $('#voice-any-label');
     const voiceMaleLabel = $('#voice-male-label');
     const voiceFemaleLabel = $('#voice-female-label');
@@ -212,6 +216,10 @@
         styleHarshLabel.classList.toggle('selected', selected === 'harsh');
         styleHiphopLabel.classList.toggle('selected', selected === 'hiphop');
         stylePansoriLabel.classList.toggle('selected', selected === 'pansori');
+        styleDrillLabel.classList.toggle('selected', selected === 'drill');
+        styleJazzhopLabel.classList.toggle('selected', selected === 'jazzhop');
+        styleEpicPansoriLabel.classList.toggle('selected', selected === 'epic_pansori');
+        styleKswaggerLabel.classList.toggle('selected', selected === 'kswagger');
     }
 
     // --- Voice Selection ---
@@ -705,10 +713,14 @@
 
         compositionsList.innerHTML = compositions.map(comp => {
             const styleMap = {
-                funny:   { emoji: '😂', name: 'Funny' },
-                harsh:   { emoji: '🤘', name: 'Harsh' },
-                hiphop:  { emoji: '🎤', name: 'Hip-Hop' },
-                pansori: { emoji: '🥁', name: '판소리' },
+                funny:        { emoji: '😂', name: 'Funny' },
+                harsh:        { emoji: '🤘', name: 'Harsh' },
+                hiphop:       { emoji: '🎤', name: 'Hip-Hop' },
+                pansori:      { emoji: '🥁', name: '판소리' },
+                drill:        { emoji: '🔪', name: 'Dark Drill' },
+                jazzhop:      { emoji: '🎷', name: 'Jazz-hop' },
+                epic_pansori: { emoji: '⚔️', name: 'Epic 판소리' },
+                kswagger:     { emoji: '🐉', name: 'K-Swagger' },
             };
             const styleInfo = styleMap[comp.music_style] || { emoji: '🎵', name: comp.music_style };
             const styleEmoji = styleInfo.emoji;
